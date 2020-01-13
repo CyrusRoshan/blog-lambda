@@ -1,0 +1,8 @@
+functions:
+  aws:
+  - lambda:
+      name: blog-lambda
+      container:
+        image: cyrusroshan/blog-lambda
+    api_gateway:
+      name: blog-api
