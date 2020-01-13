@@ -11,6 +11,7 @@ RUN echo "" && which hugo
 FROM alpine
 RUN apk add --no-cache git
 RUN apk add --no-cache python3
+RUN apk add --no-cache openssh-client
 COPY --from=install /go/bin/hugo /usr/bin
 RUN mkdir /out
 WORKDIR /out
