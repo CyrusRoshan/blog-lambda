@@ -3,82 +3,124 @@ import json
 import os
 import base64
 
+def run(desc, command):
+    print(
+        "RUN: " + desc + ": \n" +
+        "Output: " + subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True).stdout.read().decode("utf-8"),
+    )
+
 def main():
-    print("Hello world!")
+    run(
+        "env",
+        "env",
+    )
 
-    # # Get request body as json
-    # input_file_path = os.getenv("INPUT_FILE_PATH")
-    # try:
-    #     with open(input_file_path, "rb") as f:
-    #         request_body = f.read()
-    #     print("RAW request body:", request_body)
-    # except Exception as e:
-    #     print("error:", e, "couldn't load file:", input_file_path)
-    #     return
+    # Get request body as json
+    input_file_path = os.getenv("INPUT_FILE_PATH")
+    try:
+        with open(input_file_path, "rb") as f:
+            request_body = f.read()
+        print("RAW request body:", request_body)
+    except Exception as e:
+        print("error:", e, "couldn't load file:", input_file_path)
+        return
 
-    # try:
-    #     request_body_json = json.loads(request_body)
-    # except:
-    #     print("couldn't load body:", request_body)
-    #     return
-    # print(request_body_json)
+    try:
+        request_body_json = json.loads(request_body)
+    except:
+        print("couldn't load body:", request_body)
+        return
+    print(request_body_json)
 
     # # TODO perform basic auth in case lambda is actually as stateful as it seems
-    # # if request_body_json["code"] is not os.getenv("BASIC_AUTH_CODE") {
-    # #     print("Invalid code")
-    # #     exit(1)
-    # # }
+    # if request_body_json["code"] is not os.getenv("BASIC_AUTH_CODE") {
+    #     print("Invalid code")
+    #     exit(1)
+    # }
 
-    # # Get ssh key from json, save as file
-    # encoded_ssh_key = request_body_json["ssh_key"]
-    # print(encoded_ssh_key)
+    ssh_private_key = base64.b64decode(request_body_json["ssh_private_key"]).decode("utf-8")
+    ssh_public_key = base64.b64decode(request_body_json["ssh_public_key"]).decode("utf-8")
+    new_post_file_name = request_body_json["post_file_name"]
+    new_post_type = request_body_json["post_type"]
+    new_post_body = base64.b64decode(request_body_json["post_body"]).decode("utf-8")
 
-    # ssh_key = base64.b64decode(encoded_ssh_key).decode("utf-8")
-    # print(ssh_key)
+    new_post_path = "/out/blog/content/" + new_post_type + "/" + new_post_file_name + ".md"
 
-    ssh_key = "asdf-ssh-key"
-    print(ssh_key)
+    run(
+        "Make ssh dir",
+        "mkdir -p /root/.ssh",
+    )
 
-    ssh_key_path = "/tmp/ssh_key"
+    ssh_private_key_path = "/root/.ssh/id_rsa"
+    ssh_public_key_path = "/root/.ssh/id_rsa.pub"
 
-    # Write ssh key
-    f = open(ssh_key_path, "w")
-    f.write(ssh_key)
+    # Write ssh public/private key
+    f = open(ssh_private_key_path, "w")
+    f.write(ssh_private_key)
     f.close()
 
-    # Add proper permissions
-    print("chmod: \n", subprocess.run([
-        "chmod",
-        "400",
-        ssh_key_path
-    ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.decode("utf-8"), "\n")
+    f = open(ssh_public_key_path, "w")
+    f.write(ssh_public_key)
+    f.close()
+
+    home = os.getenv("HOME")
+    run(
+        "Copy public key to authorized keys",
+        "cp " + ssh_public_key_path + " " + home + "/.ssh/authorized_keys",
+    )
+    run(
+        "Add proper key permissions",
+        "chmod 600 " + ssh_private_key_path,
+    )
+    run(
+        "ssh-add",
+        "ssh-add " + ssh_private_key_path,
+    )
+
+    os.environ["GIT_SSH_COMMAND"] = "ssh -i " + ssh_private_key_path + " -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 
     # Do an authed clone of a repo with the new ssh key
-    print("restart ssh-agent: \n", subprocess.run([
-        "sudo",
-        "sh",
-        "-c",
-        "\"eval $(ssh-agent -s)\"",
-    ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.decode("utf-8"), "\n")
-
-    print("add ssh key: \n", subprocess.run([
-        "ssh-add",
-        "-K",
-        ssh_key_path,
-    ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.decode("utf-8"), "\n")
-
-    print("git clone: \n", subprocess.run([
-        "git",
+    run(
         "clone",
-        "git@github.com:CyrusRoshan/newspaper.git",
-    ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.decode("utf-8"), "\n")
+        "git clone git@github.com:CyrusRoshan/blog.git",
+    )
 
-    print("ls: \n", subprocess.run([
-        "ls",
-        "-a",
-    ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.decode("utf-8"), "\n")
+    run(
+        "rm new post file if it exists",
+        "rm -f " + new_post_path,
+    )
 
-    print("Bye, World!")
+    f = open(new_post_path, "w")
+    f.write(new_post_body)
+    f.close()
+
+    os.chdir("blog")
+
+    run(
+        "add git config",
+        '''
+        git config --global user.email "cyrusroshan@users.noreply.github.com" && git config --global user.name "Cyrus Roshan"
+        '''
+    )
+    run(
+        "commit new file",
+        "git add " + new_post_path + " && git commit -m 'Lambda commit new post'"
+    )
+    run(
+        "build hugo",
+        "hugo",
+    )
+    run(
+        "commit new build",
+        "git add -A && git commit -m 'Lambda commit new build release.'"
+    )
+    run(
+        "git push",
+        "git push origin master"
+    )
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print("Main exception when running:", e)
