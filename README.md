@@ -14,7 +14,7 @@ Publish new blog posts from anywhere!
 * Customize the environment variables in `blog-lambda.yaml` and run `scar init -f blog-lambda.yaml` to create your Lambda
 * Create a new SSH Key and add it to your account on Github
 * Send a request to the AWS Lambda.
-    * In curl, this might look like `curl https://qxl9mjtpz0.execute-api.us-east-1.amazonaws.com/scar/launch -d "$(node generator.js | base64)" | base64 --decode`
+    * In curl, this might look like `curl https://YOUR_LAMBDA_ID.execute-api.us-east-1.amazonaws.com/scar/launch -d "$(node generator.js | base64)" | base64 --decode`
     * Request body format shown in `generator.js`
 * Your blog repo is downloaded, your post is added, compiled with `hugo`, committed, and pushed back to master!
 
