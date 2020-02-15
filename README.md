@@ -21,3 +21,7 @@ Publish new blog posts from anywhere!
 ## Why?
 
 Because I can't use static site generators like [Hugo](https://github.com/gohugoio/hugo) from mobile, and because I don't think it's worth running a dedicated server instance with [my current post frequency](https://blog.cyrusroshan.com/).
+
+## Best Practices
+
+Presumably you're hosting this on your own Lambda and sending data over HTTPS, but even so, you might want to exercise increased caution when storing and sending your SSH key. I would recommend making a separate user or service account which is only given access to the git repo which it needs to push to.
