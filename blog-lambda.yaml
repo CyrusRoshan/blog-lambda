@@ -1,8 +1,19 @@
+# See here for more information on what you can add to this file:
+# https://github.com/grycap/scar/blob/99a8cb250ecfe60cbc182d8ebd55d9b6b1dbc683/fdl-example.yaml
+
 functions:
   aws:
   - lambda:
       name: blog-lambda
+      execution_mode: lambda
+      description: "Publish Hugo blog posts from anywhere!"
       container:
         image: cyrusroshan/blog-lambda
+        environment:
+          Variables:
+            BLOG_REPO: "git@github.com:CyrusRoshan/blog.git"
+            USER_EMAIL: "cyrusbot@users.noreply.github.com"
+            USER_NAME: "Cyrus Bot"
+      memory: 750
     api_gateway:
       name: blog-api
