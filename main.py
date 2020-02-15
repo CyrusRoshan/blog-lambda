@@ -88,9 +88,11 @@ def main():
         "mkdir " + os.path.dirname(new_post_path),
     )
 
-    f = open(new_post_path, "w")
-    f.write(new_post_body)
-    f.close()
+    # Only create the new file if its body isn't empty, otherwise leave it deleted
+    if len(new_post_body) != 0:
+        f = open(new_post_path, "w")
+        f.write(new_post_body)
+        f.close()
 
     os.chdir("blog")
 
